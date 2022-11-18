@@ -54,4 +54,6 @@ object Main extends App {
     var dfPages = generateDataFrame (100)
     dfPages.show()
     dfPages.coalesce(1).write.mode("overwrite").option("header","true").csv("hdfs://192.168.251.105/df/df.csv")
+
+  //продолжение следует ...
 }
