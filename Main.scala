@@ -1,6 +1,7 @@
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, date_format}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types.{BooleanType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
+
 import java.sql
 import scala.util.Random
 object Main extends App {
@@ -69,5 +70,8 @@ object Main extends App {
    dfPages.groupBy("userId").count().orderBy(col("count").desc).show(5)
    println("Процент посетителей, у которых есть ЛК")
   dfPages.groupBy("sign").count().withColumn("procents",col("count")/lines*100).select("procents").show(1)
+   println("Временной промежуток, в течение которого было больше всего активностей на сайте")
+  dfPages.withColumn("timeWindow",date_format(col("timestamp"), "HH")).show(10)
+  //надо с условиями разобраться, чтобы часы заменить на диапазон времени
   //продолжение следует ...
 }
