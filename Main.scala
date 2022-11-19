@@ -1,3 +1,4 @@
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types.{BooleanType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 import java.sql
@@ -5,10 +6,10 @@ import scala.util.Random
 object Main extends App {
   def generateDataFrame (datsFrameSize: Int):DataFrame = {
     val pagesTagsSchema = new StructType ()
-    .add ("id", IntegerType) //  уникальный идентификатор посетителя сайта.
+    .add ("userId", IntegerType) //  уникальный идентификатор посетителя сайта.
     .add ("timestamp", TimestampType) // дата и время события в формате unix timestamp
     .add ("action", StringType) // тип события
-    .add ("page_id", IntegerType) // id текущей страницы
+    .add ("pageId", IntegerType) // id текущей страницы
     .add ("tag", StringType) //  список тематик
     .add ("sign", BooleanType) // наличие у пользователя личного кабинета
     var pagesTagsData = Seq (
@@ -18,9 +19,16 @@ object Main extends App {
     .add ("id", IntegerType)
     .add ("name", StringType)
     val userData = Seq (
-    Row (12345, "Иванов"),
-    Row (2, "Петров"),
-    Row (3, "Сидоров")
+      Row (12345, "Фамилия 1"),
+      Row (2, "Фамилия 2"),
+      Row (3, "Фамилия 3"),
+      Row (4, "Фамилия 4"),
+      Row (5, "Фамилия 5"),
+      Row (6, "Фамилия 6"),
+      Row (7, "Фамилия 7"),
+      Row (8, "Фамилия 8"),
+      Row (9, "Фамилия 9"),
+      Row (10, "Фамилия 10")
     )
     var dfUsers = spark.createDataFrame (spark.sparkContext.parallelize (userData), usersSchema)
     val tagsSchema = new StructType ()
@@ -45,15 +53,21 @@ object Main extends App {
     }
     return spark.createDataFrame (spark.sparkContext.parallelize (pagesTagsData), pagesTagsSchema)
   }
+
+
     val spark = SparkSession.builder
-      .master("spark://192.168.251.105:7077")
+      .master("spark://192.168.251.107:7077")
       .appName("Spark Task 3.3")
       .config("spark.driver.host","192.168.251.106")
       .config("spark.driver.extraClassPath","C:/Users/nevzorov.KB/IdeaProjects/Spark_3_3/out/artifacts/Spark_3_3_jar/Spark_3_3.jar")
       .getOrCreate()
+    spark.sparkContext.setLogLevel("WARN")
     var dfPages = generateDataFrame (100)
     dfPages.show()
-    dfPages.coalesce(1).write.mode("overwrite").option("header","true").csv("hdfs://192.168.251.105/df/df.csv")
+  //  dfPages.coalesce(1).write.mode("overwrite").option("header","true").csv("hdfs://192.168.251.105/df/df.csv")
+  println("Топ 5 активных пользователей")
+   dfPages.groupBy("userId").count().orderBy(col("count").desc).show(5)
+
 
   //продолжение следует ...
 }
