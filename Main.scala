@@ -1,11 +1,11 @@
 import org.apache.spark.sql.functions.{col, date_format, regexp_extract, regexp_replace}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.apache.spark.sql.types.{BooleanType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
+import org.apache.spark.sql.types.{BooleanType, DateType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 
 import java.sql
 import scala.util.Random
 object Main extends App {
-  def generateDataFrame (datsFrameSize: Int):DataFrame = {
+  def generateDataFrame (datsFrameSize: Int, dfUsers:DataFrame):DataFrame = {
     val pagesTagsSchema = new StructType ()
     .add ("userId", IntegerType) //  уникальный идентификатор посетителя сайта.
     .add ("timestamp", TimestampType) // дата и время события в формате unix timestamp
@@ -16,22 +16,7 @@ object Main extends App {
     var pagesTagsData = Seq (
     Row (12345, new sql.Timestamp (System.currentTimeMillis () ), "click", 101, "Sport", false)
     )
-    val usersSchema = new StructType ()
-    .add ("id", IntegerType)
-    .add ("name", StringType)
-    val userData = Seq (
-      Row (12345, "Фамилия 1"),
-      Row (2, "Фамилия 2"),
-      Row (3, "Фамилия 3"),
-      Row (4, "Фамилия 4"),
-      Row (5, "Фамилия 5"),
-      Row (6, "Фамилия 6"),
-      Row (7, "Фамилия 7"),
-      Row (8, "Фамилия 8"),
-      Row (9, "Фамилия 9"),
-      Row (10, "Фамилия 10")
-    )
-    var dfUsers = spark.createDataFrame (spark.sparkContext.parallelize (userData), usersSchema)
+
     val tagsSchema = new StructType ()
     .add ("id", IntegerType)
     .add ("name", StringType)
@@ -50,12 +35,12 @@ object Main extends App {
     var dfAction = spark.createDataFrame (spark.sparkContext.parallelize (actionsData), actionsSchema)
     var dfTags = spark.createDataFrame (spark.sparkContext.parallelize (tagsData), tagsSchema)
     for (a <- 1 to datsFrameSize-1) {
-      pagesTagsData = pagesTagsData ++ Seq (Row (userData.lift (Random.nextInt (userData.length) ).get (0), new sql.Timestamp ("1668799353153".toLong - Random.nextInt ().abs.toLong * 1000), actionsData.lift (Random.nextInt (actionsData.length) ).get (1), Random.nextInt (10), tagsData.lift (Random.nextInt (tagsData.length) ).get (1), Random.nextInt (2) == 1) )
+      pagesTagsData = pagesTagsData ++ Seq (Row (userData.lift (Random.nextInt (userData.length) ).get (0), new sql.Timestamp ("1668799353153".toLong - Random.nextInt (44640000).abs.toLong * 1000), actionsData.lift (Random.nextInt (actionsData.length) ).get (1), Random.nextInt (10), tagsData.lift (Random.nextInt (tagsData.length) ).get (1), Random.nextInt (2) == 1) )
     }
     return spark.createDataFrame (spark.sparkContext.parallelize (pagesTagsData), pagesTagsSchema)
   }
 
-    val lines = 200 //количество генерируемых строк датафрейма
+    val lines = 50 //количество генерируемых строк датафрейма
     val spark = SparkSession.builder
       .master("spark://192.168.251.107:7077")
       .appName("Spark Task 3.3")
@@ -63,7 +48,27 @@ object Main extends App {
       .config("spark.driver.extraClassPath","C:/Users/nevzorov.KB/IdeaProjects/Spark_3_3/out/artifacts/Spark_3_3_jar/Spark_3_3.jar")
       .getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
-    var dfPages = generateDataFrame (200)
+
+  val usersSchema = new StructType()
+    .add("id", IntegerType)       // Идентификатор пользователя
+    .add("name", StringType)      // Фамилия
+    .add("lkId", IntegerType)    // Идентификационный номер личного кабинета
+    .add("createDate", StringType)  // Дата создания
+  val userData = Seq(
+    Row(12345, "Фамилия 1", 1, "11/20/2022"),
+    Row(2, "Фамилия 2", 2, "11/20/2022"),
+    Row(3, "Фамилия 3", 3, "11/20/2022"),
+    Row(4, "Фамилия 4", 4, "11/20/2022"),
+    Row(5, "Фамилия 5", 5, "11/20/2022"),
+    Row(6, "Фамилия 6", 6, "11/20/2022"),
+    Row(7, "Фамилия 7", 7, "11/20/2022"),
+    Row(8, "Фамилия 8", 8, "11/20/2022"),
+    Row(9, "Фамилия 9", 9, "11/20/2022"),
+    Row(10, "Фамилия 10", 10, "11/20/2022")
+  )
+  var dfUsers = spark.createDataFrame(spark.sparkContext.parallelize(userData), usersSchema)
+
+    var dfPages = generateDataFrame (lines, dfUsers)
     dfPages.show()
   //  dfPages.coalesce(1).write.mode("overwrite").option("header","true").csv("hdfs://192.168.251.105/df/df.csv")
   println("Топ 5 активных пользователей")
@@ -93,6 +98,12 @@ object Main extends App {
     .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow5", "16:00 to 10:59"))
     .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow6", "20:00 to 23:59"))
     .show(1)
+  println("фамилии посетителей, которые читали хотя бы одну новость про спорт.")
+  dfPages.join(dfUsers,dfUsers("id")===dfPages("userId"))
+    .select("name","tag").filter(col("tag")==="Sport" && col("action")==="click")
+    .groupBy(col("name")).count()
+    .orderBy(col("name"))
+    .select(col("name")).show()
 
   //продолжение следует ...
 }
