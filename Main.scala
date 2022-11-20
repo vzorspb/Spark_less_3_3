@@ -1,4 +1,4 @@
-import org.apache.spark.sql.functions.{col, date_format}
+import org.apache.spark.sql.functions.{col, date_format, regexp_extract, regexp_replace}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types.{BooleanType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 
@@ -71,7 +71,28 @@ object Main extends App {
    println("Процент посетителей, у которых есть ЛК")
   dfPages.groupBy("sign").count().withColumn("procents",col("count")/lines*100).select("procents").show(1)
    println("Временной промежуток, в течение которого было больше всего активностей на сайте")
-  dfPages.withColumn("timeWindow",date_format(col("timestamp"), "HH")).show(10)
-  //надо с условиями разобраться, чтобы часы заменить на диапазон времени
+//  timeWindow1 ("00","01","02","03")
+//  timeWindow2 ("04","05","06","07")
+//  timeWindow3 ("08","09","10","11")
+//  timeWindow4 ("12","13","14","15")
+//  timeWindow5 ("16","17","18","19")
+//  timeWindow6 set("20","21","22","23")
+  dfPages.withColumn("timeWindow",regexp_replace(date_format(col("timestamp"), "HH"),"0[0-3]","timeWindow1"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"0[4-7]", "timeWindow2"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"0[8-9]", "timeWindow3"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"1[0,1]", "timeWindow3"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"1[2-5]", "timeWindow4"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"1[6-9]", "timeWindow5"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"2[0-3]", "timeWindow6"))
+    .groupBy("timeWindow").count()
+    .orderBy(col("count").desc)
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow1", "00:00 to 03:59"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow2", "04:00 to 07:59"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow3", "08:00 to 11:59"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow4", "12:00 to 15:59"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow5", "16:00 to 10:59"))
+    .withColumn("timeWindow",regexp_replace(col("timeWindow"),"timeWindow6", "20:00 to 23:59"))
+    .show(1)
+
   //продолжение следует ...
 }
