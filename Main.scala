@@ -1,4 +1,4 @@
-import org.apache.spark.sql.functions.{col, date_format, regexp_extract, regexp_replace}
+import org.apache.spark.sql.functions.{col, date_format, regexp_extract, regexp_replace, round, to_date, to_timestamp}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types.{BooleanType, DateType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 
@@ -44,7 +44,7 @@ object Main extends App {
     val spark = SparkSession.builder
       .master("spark://192.168.251.107:7077")
       .appName("Spark Task 3.3")
-      .config("spark.driver.host","192.168.251.106")
+      .config("spark.driver.host","192.168.251.105")
       .config("spark.driver.extraClassPath","C:/Users/nevzorov.KB/IdeaProjects/Spark_3_3/out/artifacts/Spark_3_3_jar/Spark_3_3.jar")
       .getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
@@ -55,16 +55,16 @@ object Main extends App {
     .add("lkId", IntegerType)    // Идентификационный номер личного кабинета
     .add("createDate", StringType)  // Дата создания
   val userData = Seq(
-    Row(12345, "Фамилия 1", 1, "11/20/2022"),
-    Row(2, "Фамилия 2", 2, "11/20/2022"),
-    Row(3, "Фамилия 3", 3, "11/20/2022"),
-    Row(4, "Фамилия 4", 4, "11/20/2022"),
-    Row(5, "Фамилия 5", 5, "11/20/2022"),
-    Row(6, "Фамилия 6", 6, "11/20/2022"),
-    Row(7, "Фамилия 7", 7, "11/20/2022"),
-    Row(8, "Фамилия 8", 8, "11/20/2022"),
-    Row(9, "Фамилия 9", 9, "11/20/2022"),
-    Row(10, "Фамилия 10", 10, "11/20/2022")
+    Row(12345, "Иванов Сергей Андреевич", 1, "11/20/2022"),
+    Row(2, "Петрова Ольга Николаевна", 2, "11/20/2022"),
+    Row(3, "Сидорова Оксана Сергеевна", 3, "11/20/2022"),
+    Row(4, "Филимонова Ксения Николаевна", null , null),
+    Row(5, "Веселов Алексей Борисович", 5, "11/20/2022"),
+    Row(6, "Крылов Илья Владимирович", 6, "11/20/2022"),
+    Row(7, "Алексеев Николай Васильевич", null , null),
+    Row(8, "Васильева Людмила Борисовна", 8, "11/20/2022"),
+    Row(9, "Серов Дмитрий Александрович", 9, "11/20/2022"),
+    Row(10, "Быков Василий Альбертович", 10, "11/20/2022")
   )
   var dfUsers = spark.createDataFrame(spark.sparkContext.parallelize(userData), usersSchema)
 
@@ -103,7 +103,15 @@ object Main extends App {
     .select("name","tag").filter(col("tag")==="Sport" && col("action")==="click")
     .groupBy(col("name")).count()
     .orderBy(col("name"))
-    .select(col("name")).show()
+    .select(col("name"))
+    .show()
+
+  println ("10% ЛК, у которых максимальная разница между датой создания ЛК и датой последнего посещения")
+ // val numLk = ((dfUsers.groupBy("lkId").count().count()-1).toFloat/10+0.5)
+  dfPages.join(dfUsers, dfUsers("id") === dfPages("userId"))
+    .withColumn("dateDelta", to_timestamp(col("CreateDate"),"MM/dd/yyyy").cast(LongType)-col("timestamp").cast(LongType))
+    .groupBy("lkId").max("dateDelta").orderBy(col("max(dateDelta)").desc).select(col="lkId")
+    .show(((dfUsers.groupBy("lkId").count().count()-1).toFloat/10+0.5).round.toInt)
 
   //продолжение следует ...
 }
