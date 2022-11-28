@@ -1,5 +1,5 @@
 import org.apache.spark.sql.functions.{col, date_format, regexp_extract, regexp_replace, round, to_date, to_timestamp}
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession, functions}
 import org.apache.spark.sql.types.{BooleanType, DateType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 
 import java.sql
@@ -103,7 +103,7 @@ object Main extends App {
     .select("name","tag").filter(col("tag")==="Sport" && col("action")==="click")
     .groupBy(col("name")).count()
     .orderBy(col("name"))
-    .select(col("name"))
+    .select(col("name")).withColumn("family",functions.split(col("name")," ").getItem(0)).select("family")
     .show()
 
   println ("10% ЛК, у которых максимальная разница между датой создания ЛК и датой последнего посещения")
